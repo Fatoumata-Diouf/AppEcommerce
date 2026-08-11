@@ -1,0 +1,34 @@
+server:
+  port: 8083
+
+
+spring:
+  application:
+    name: PRODUIT-SERVICE
+
+
+  datasource:
+    url: jdbc:h2:mem:produitdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+
+  h2:
+    console:
+      enabled: true
+
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+
+  instance:
+    prefer-ip-address: true
