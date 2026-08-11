@@ -40,4 +40,4 @@ jobs:
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/discovery-service:latest ./discovery-service
 
       - name: Publier l'image Docker
-        run: docker push ${{ secrets.DOCKER_PASSWORD }}/discovery-service:latest
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/discovery-service:latest
