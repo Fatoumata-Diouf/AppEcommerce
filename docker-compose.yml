@@ -1,4 +1,3 @@
-
 services:
 
   discovery-service:
@@ -16,6 +15,7 @@ services:
       - "8081:8081"
     depends_on:
       - discovery-service
+      - postgres
     networks:
       - microservices-net
 
@@ -26,6 +26,7 @@ services:
       - "8083:8083"
     depends_on:
       - discovery-service
+      - postgres
     networks:
       - microservices-net
 
@@ -38,6 +39,7 @@ services:
       - discovery-service
       - client-service
       - produit-service
+      - postgres
     networks:
       - microservices-net
 
@@ -54,6 +56,39 @@ services:
     networks:
       - microservices-net
 
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: passer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - microservices-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: passer
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - microservices-net
+
 networks:
   microservices-net:
     driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
