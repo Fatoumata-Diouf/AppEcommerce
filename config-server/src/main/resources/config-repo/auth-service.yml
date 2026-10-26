@@ -1,0 +1,5 @@
+security:
+  jwt:
+    secret: "ISI-Master2-2026-TP-Microservices-JWT-Shared-Secret-Change-Me"
+    expiration-seconds: 3600      # 1 heure
+    issuer: isi-auth-service
