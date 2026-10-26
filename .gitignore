@@ -13,6 +13,10 @@ target/
 .springBeans
 .sts4-cache
 
+# Ignorer tous les fichiers exécutables Java compilés
+*.jar
+*.war
+*.ear
 ### IntelliJ IDEA ###
 .idea
 *.iws
