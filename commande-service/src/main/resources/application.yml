@@ -1,34 +1,16 @@
-server:
-  port: 8082
-
 
 spring:
   application:
-    name: COMMANDE-SERVICE
+    name: commande-service
 
 
-  datasource:
-    url: jdbc:postgresql://postgres:5432/commandedb
-    username: admin
-    password: passer
-    driver-class-name: org.postgresql.Driver
-
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-
-
-  h2:
-    console:
-      enabled: true
-
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://discovery-service:8761/eureka/
-
-  instance:
-    prefer-ip-address: true
+  config:
+    import: "configserver:http://config-server:8888"
+  cloud:
+    config:
+      fail-fast: false           # crash si config-server KO
+      retry: # retry si config-server lent
+        initial-interval: 1000
+        max-attempts: 6
+        max-interval: 2000
+        multiplier: 1.1

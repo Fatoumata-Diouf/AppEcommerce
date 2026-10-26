@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/Fatoumata-Diouf/AppEcommerce-Config.git
+          default-label: main
+          # Cloner localement, garder en cache
+          clone-on-start: true
+          force-pull: true
+
+server:
+  port: 8888
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true

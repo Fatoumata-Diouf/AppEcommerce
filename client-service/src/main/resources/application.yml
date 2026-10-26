@@ -1,34 +1,16 @@
-server:
-  port: 8081
-
 
 spring:
   application:
-    name: CLIENT-SERVICE
+    name: client-service
 
+  config:
+    import: "configserver:http://config-server:8888"
 
-  datasource:
-    url: jdbc:postgresql://postgres:5432/clientdb
-    username: admin
-    password: passer
-    driver-class-name: org.postgresql.Driver
-
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-
-
-  h2:
-    console:
-      enabled: true
-
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://discovery-service:8761/eureka/
-
-  instance:
-    prefer-ip-address: true
+  cloud:
+    config:
+      fail-fast: false
+      retry:
+        initial-interval: 1000
+        max-attempts: 6
+        max-interval: 2000
+        multiplier: 1.1

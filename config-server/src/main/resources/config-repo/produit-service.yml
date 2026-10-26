@@ -1,0 +1,30 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: produit-service
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/produitdb
+    username: admin
+    password: passer
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# Proprietes metier RAFRAICHISSABLES a chaud
+library:
+  max-loan-days: 14
+  late-fee-per-day: 50
+  welcome-message: "Bienvenue dans la page de catalogue produits"

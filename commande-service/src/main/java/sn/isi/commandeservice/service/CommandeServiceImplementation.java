@@ -1,6 +1,8 @@
 package sn.isi.commandeservice.service;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sn.isi.commandeservice.client.ClientFeignClient;
 import sn.isi.commandeservice.client.ProduitFeignClient;
@@ -8,13 +10,17 @@ import sn.isi.commandeservice.dto.ClientDTO;
 import sn.isi.commandeservice.dto.CommandeDTO;
 import sn.isi.commandeservice.dto.ProduitDTO;
 import sn.isi.commandeservice.entity.Commande;
+import sn.isi.commandeservice.exception.ClientNotFoundException;
+import sn.isi.commandeservice.exception.CommandeNotFoundException;
+import sn.isi.commandeservice.exception.ProduitNotFoundException;
 import sn.isi.commandeservice.repository.CommandeRepository;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-public class CommandeServiceImplementation implements ICommandeService{
+public class CommandeServiceImplementation implements ICommandeService {
 
     private final CommandeRepository commandeRepository;
     private final ClientFeignClient clientFeignClient;
@@ -22,58 +28,35 @@ public class CommandeServiceImplementation implements ICommandeService{
 
     @Override
     public Commande save(Commande commande) {
+        log.info("Début de création d'une commande : clientId={}, produitId={}, quantite={}",
+                commande.getClientId(), commande.getProduitId(), commande.getQuantite());
 
-        // Vérification du client
-        ClientDTO client = clientFeignClient.getClientById(
-                commande.getClientId()
-        );
+        ClientDTO client = fetchClient(commande.getClientId());
+        ProduitDTO produit = fetchProduit(commande.getProduitId());
 
-        if (client == null) {
-            throw new RuntimeException(
-                    "Client introuvable : " + commande.getClientId()
-            );
-        }
+        commande.setMontant(produit.getPrix() * commande.getQuantite());
+        log.debug("Montant calculé : {} ({} x {})",
+                commande.getMontant(), produit.getPrix(), commande.getQuantite());
 
-
-        // Vérification du produit
-        ProduitDTO produit = produitFeignClient.getProduitById(
-                commande.getProduitId()
-        );
-
-        if (produit == null) {
-            throw new RuntimeException(
-                    "Produit introuvable : " + commande.getProduitId()
-            );
-        }
-
-
-        // Calcul du montant
-        commande.setMontant(
-                produit.getPrix() * commande.getQuantite()
-        );
-
-
-        // Enregistrement
-        return commandeRepository.save(commande);
+        Commande saved = commandeRepository.save(commande);
+        log.info("Commande enregistrée avec succès : id={}, montant={}", saved.getId(), saved.getMontant());
+        return saved;
     }
 
     @Override
     public CommandeDTO findById(Long id) {
+        log.info("Recherche de la commande id={}", id);
 
         Commande commande = commandeRepository.findById(id)
-                .orElse(null);
+                .orElseThrow(() -> {
+                    log.warn("Aucune commande trouvée avec id={}", id);
+                    return new CommandeNotFoundException(id);
+                });
 
-        if (commande == null) {
-            return null;
-        }
+        ClientDTO client = fetchClient(commande.getClientId());
+        ProduitDTO produit = fetchProduit(commande.getProduitId());
 
-        ClientDTO client = clientFeignClient.getClientById(
-                commande.getClientId()
-        );
-
-        ProduitDTO produit = produitFeignClient.getProduitById(
-                commande.getProduitId()
-        );
+        log.info("Commande id={} reconstituée avec ses informations client et produit", id);
 
         return new CommandeDTO(
                 commande.getId(),
@@ -88,7 +71,32 @@ public class CommandeServiceImplementation implements ICommandeService{
 
     @Override
     public List<Commande> findAll() {
+        log.info("Récupération de toutes les commandes");
+        List<Commande> commandes = commandeRepository.findAll();
+        log.info("{} commande(s) récupérée(s)", commandes.size());
+        return commandes;
+    }
 
-        return commandeRepository.findAll();
+    // Méthodes private
+
+    private ClientDTO fetchClient(Long clientId) {
+        log.debug("Appel au client-service pour clientId={}", clientId);
+        try {
+            return clientFeignClient.getClientById(clientId);
+        } catch (FeignException.NotFound e) {
+            log.warn("Client introuvable dans client-service : clientId={}", clientId);
+            throw new ClientNotFoundException(clientId);
+        }
+
+    }
+
+    private ProduitDTO fetchProduit(Long produitId) {
+        log.debug("Appel au produit-service pour produitId={}", produitId);
+        try {
+            return produitFeignClient.getProduitById(produitId);
+        } catch (FeignException.NotFound e) {
+            log.warn("Produit introuvable dans produit-service : produitId={}", produitId);
+            throw new ProduitNotFoundException(produitId);
+        }
     }
 }

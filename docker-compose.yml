@@ -1,60 +1,12 @@
+x-spring-common: &spring-common
+  restart: on-failure
+  networks:
+    - microservices-net
+  environment:
+    SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+    EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+
 services:
-
-  discovery-service:
-    build: ./discovery-service
-    container_name: discovery-service
-    ports:
-      - "8761:8761"
-    networks:
-      - microservices-net
-
-  client-service:
-    build: ./client-service
-    container_name: client-service
-    ports:
-      - "8081:8081"
-    depends_on:
-      - discovery-service
-      - postgres
-    networks:
-      - microservices-net
-
-  produit-service:
-    build: ./produit-service
-    container_name: produit-service
-    ports:
-      - "8083:8083"
-    depends_on:
-      - discovery-service
-      - postgres
-    networks:
-      - microservices-net
-
-  commande-service:
-    build: ./commande-service
-    container_name: commande-service
-    ports:
-      - "8082:8082"
-    depends_on:
-      - discovery-service
-      - client-service
-      - produit-service
-      - postgres
-    networks:
-      - microservices-net
-
-  gateway-service:
-    build: ./gateway-service
-    container_name: gateway-service
-    ports:
-      - "8080:8080"
-    depends_on:
-      - discovery-service
-      - client-service
-      - produit-service
-      - commande-service
-    networks:
-      - microservices-net
 
   postgres:
     image: postgres:16
@@ -67,6 +19,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - microservices-net
 
@@ -79,11 +36,103 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:
       - microservices-net
+
+  discovery-service:
+    <<: *spring-common
+    build: ./discovery-service
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    environment: {}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  config-server:
+    <<: *spring-common
+    build: ./config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  client-service:
+    <<: *spring-common
+    build: ./client-service
+    container_name: client-service
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  produit-service:
+    <<: *spring-common
+    build: ./produit-service
+    container_name: produit-service
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  commande-service:
+    <<: *spring-common
+    build: ./commande-service
+    container_name: commande-service
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      client-service:
+        condition: service_started
+      produit-service:
+        condition: service_started
+
+  gateway-service:
+    <<: *spring-common
+    build: ./gateway-service
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      client-service:
+        condition: service_started
+      produit-service:
+        condition: service_started
+      commande-service:
+        condition: service_started
+
 
 networks:
   microservices-net:

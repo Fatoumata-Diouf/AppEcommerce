@@ -1,33 +1,15 @@
-server:
-  port: 8080
 
 spring:
   application:
-    name: GATEWAY-SERVICE
+    name: gateway-service
 
+  config:
+    import: "configserver:http://config-server:8888"
   cloud:
-    gateway:
-      routes:
-
-        - id: client-service
-          uri: lb://CLIENT-SERVICE
-          predicates:
-            - Path=/clients/**
-
-        - id: produit-service
-          uri: lb://PRODUIT-SERVICE
-          predicates:
-            - Path=/produits/**
-
-        - id: commande-service
-          uri: lb://COMMANDE-SERVICE
-          predicates:
-            - Path=/commandes/**
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://discovery-service:8761/eureka/
-
-  instance:
-    prefer-ip-address: true
+    config:
+      fail-fast: false           # crash si config-server KO
+      retry: # retry si config-server lent
+        initial-interval: 1000
+        max-attempts: 6
+        max-interval: 2000
+        multiplier: 1.1
